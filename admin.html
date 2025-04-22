@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Data Absensi</title>
+  <link rel="icon" type="image/png" href="pertamina-logoicon.png">
+  <style>
+    :root {
+      --primary: #2c7be5;
+      --primary-dark: #1a5bb8;
+      --danger: #f44336;
+      --danger-dark: #c62828;
+      --bg-light: #f1f5f9;
+      --text: #1e293b;
+      --card: #ffffff;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      background-color: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px var(--shadow);
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 12px;
+    }
+    .header img {
+      height: 48px;
+    }
+    .header h2 {
+      margin: 0;
+      color: var(--primary-dark);
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    .dashboard-button {
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    .dashboard-button:hover {
+      background-color: var(--primary-dark);
+    }
+    .filters {
+      background-color: var(--card);
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px var(--shadow);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .filters label {
+      font-weight: 500;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .filters input,
+    .filters select,
+    .filters button {
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+    .filters input,
+    .filters select {
+      width: 200px;
+    }
+    .filters button {
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+      border: none;
+      font-size: 14px;
+      transition: background-color 0.3s ease;
+    }
+    .filters button:hover {
+      background-color: var(--primary-dark);
+    }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+      box-shadow: 0 2px 6px var(--shadow);
+    }
+    th,
+    td {
+      padding: 14px;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 14px;
+    }
+    th {
+      background-color: var(--primary);
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: 600;
+    }
+    td:first-child,
+    th:first-child {
+      position: sticky;
+      left: 0;
+      background-color: var(--primary-dark);
+      color: white;
+      z-index: 1;
+    }
+    tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+    .foto-preview {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      object-fit: cover;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    @media (max-width: 768px) {
+      .filters {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      table {
+        font-size: 12px;
+      }
+      .foto-preview {
+        width: 50px;
+        height: 50px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="dashboard-button" href="dashboard.html">← Dashboard</a>
+    <div class="header">
+      <h2>Data Absensi Karyawan</h2>
+    </div>
+
+    <div class="filters">
+      <label for="filter-tanggal">Tanggal:</label>
+      <input type="date" id="filter-tanggal">
+
+      <label for="filter-absen">Tipe Absen:</label>
+      <select id="filter-absen">
+        <option value="">Semua</option>
+        <option value="Masuk">Absen Masuk</option>
+        <option value="Pulang">Absen Pulang</option>
+      </select>
+
+      <button onclick="renderTable()">Terapkan Filter</button>
+      <button onclick="exportExcel()">Export Excel</button>
+      <button onclick="exportPDF()">Export PDF</button>
+    </div>
+
+    <table id="absensi-table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Nama</th>
+          <th>Tanggal & Jam</th>
+          <th>Lokasi</th>
+          <th>Foto</th>
+          <th>Tipe Absen</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+  <script>
+    if (localStorage.getItem('loggedIn') !== 'true') {
+      window.location.href = 'login.html';
+    }
+
+    const endpoint = 
+      'https://script.google.com/macros/s/AKfycbxPT6Q3Px6_bvuxIb87NPheNysh5Rq5XSJHennOzUXAGNJMHRaCpyg1VixiJ-D59k8/exec?action=absensi';
+    const tableBody     = document.querySelector("#absensi-table tbody");
+    const filterTanggal = document.getElementById("filter-tanggal");
+    const filterAbsen   = document.getElementById("filter-absen");
+
+    function formatTanggalKeInput(str) {
+      const d = new Date(str);
+      return isNaN(d) ? "" : d.toISOString().split('T')[0];
+    }
+
+    async function fetchData() {
+      try {
+        const res = await fetch(endpoint);
+        const json = await res.json();
+        return Array.isArray(json) ? json : (json.absensi || []);
+      } catch (e) {
+        console.error("Gagal mengambil data:", e);
+        return [];
+      }
+    }
+
+    async function renderTable() {
+      const data = await fetchData();
+      const tglVal = filterTanggal.value;
+      const typeVal = filterAbsen.value;
+      tableBody.innerHTML = "";
+
+      data
+        .filter(item => {
+          const matchDate = !tglVal || formatTanggalKeInput(item.Timestamp) === tglVal;
+          const matchType = !typeVal || item.Tipe === typeVal;
+          return matchDate && matchType;
+        })
+        .forEach((item, i) => {
+          const row = document.createElement("tr");
+          const fotoSrc = item.Foto?.startsWith("data:image")
+            ? item.Foto
+            : "https://via.placeholder.com/80?text=No+Image";
+
+          row.innerHTML = `
+            <td>${i+1}</td>
+            <td>${item.Nama || "-"}</td>
+            <td>${item.Timestamp || ""} ${item.Jam || ""}</td>
+            <td><a href="${item.Lokasi}" target="_blank">Lihat Lokasi</a></td>
+            <td><img class="foto-preview" src="${fotoSrc}" alt="foto"></td>
+            <td>${item.Tipe || "-"}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+    }
+
+    filterTanggal.addEventListener("change", renderTable);
+    filterAbsen.addEventListener("change", renderTable);
+    window.addEventListener("load", renderTable);
+
+    function exportExcel() {
+      const wb = XLSX.utils.book_new();
+      const data = Array.from(tableBody.children).map(r => [
+        r.children[0].textContent,
+        r.children[1].textContent,
+        r.children[2].textContent,
+        r.children[3].textContent,
+        r.children[5].textContent
+      ]);
+      const ws_data = [
+        ["Data Absensi"], [], 
+        ["No","Nama","Tanggal & Jam","Lokasi","Tipe Absen"],
+        ...data
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Absensi");
+      XLSX.writeFile(wb, `Absensi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 20;
+      doc.setFontSize(16);
+      doc.text("Data Absensi", 20, y);
+      y += 10;
+      doc.setFontSize(10);
+
+      Array.from(tableBody.children).forEach((r,i) => {
+        const nama  = r.children[1].textContent;
+        const tgljm = r.children[2].textContent;
+        const lok   = r.children[3].textContent;
+        const tipe  = r.children[5].textContent;
+        doc.text(`${i+1}. ${nama} | ${tgljm} | ${tipe}`, 20, y);
+        y += 6;
+        if (y > 280) { doc.addPage(); y = 20; }
+      });
+
+      doc.save(`Absensi_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    setTimeout(() => localStorage.removeItem('loggedIn'), 3600000);
+  </script>
+</body>
+</html>
