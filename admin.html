@@ -208,9 +208,12 @@
     const filterTanggal = document.getElementById("filter-tanggal");
     const filterAbsen   = document.getElementById("filter-absen");
 
-    function formatTanggalKeInput(str) {
-      const d = new Date(str);
-      return isNaN(d) ? "" : d.toISOString().split('T')[0];
+     function formatTanggalKeInput(str) {
+      // Cek apakah timestamp punya format yang valid
+      if (!str || !str.includes('/')) return '';
+      const [tanggal, bulan, tahunWaktu] = str.split(' ')[0].split('/');
+      const tahun = tahunWaktu.length === 2 ? '20' + tahunWaktu : tahunWaktu;
+      return `${tahun}-${bulan.padStart(2, '0')}-${tanggal.padStart(2, '0')}`;
     }
 
     async function fetchData() {
